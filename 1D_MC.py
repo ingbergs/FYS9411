@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from random import seed, random
+import time
 
 #analytical expression for the wavefunction
 def waveFunction(alpha, betha, r):
@@ -92,14 +93,16 @@ def monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim):
                     acceptCount += 1
                     posOld = posNew.copy()
                     wfOld = wfNew
-                    dE = localEnergy_num(alpha,betha, posOld)
-                
+                    dE = localEnergy(alpha,betha, posOld)
+                """
                 acceptanceRate = acceptCount/k
                 if(acceptanceRate < 0.5):
                     step -= 0.001
                 if(acceptanceRate > 0.5):
                     step += 0.001
-               
+                if(acceptanceRate == -1.0):
+                    print(j)
+                """    
                 energy += dE
                 energy2 += dE**2
             
@@ -118,11 +121,12 @@ N = 1E4
 alpha = 0.4
 betha = 1.0
 maxVar = 10
-nParticle = 10
+nParticle = 100
 dim = 1
 
+start_time = time.time()
 Energies, alphaList, Vars = monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim)
-
+print(print("--- %s seconds ---" % (time.time() - start_time)))
 
 plt.plot(alphaList,Energies)
 plt.xlabel('Alpha (AU)')
