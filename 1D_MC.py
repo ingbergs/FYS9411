@@ -57,7 +57,7 @@ def monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim):
     
     
     alphaList = np.zeros(maxVar)
-    
+    idealAccept = 0.5
     Energies = np.zeros((maxVar,maxVar))
     Vars = np.zeros((maxVar,maxVar))
     posOld = np.zeros((nParticle, dim), np.double)
@@ -68,7 +68,7 @@ def monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim):
     for i in range(maxVar):
         alpha += 0.025
         alphaList[i] = alpha 
-        step = 0.1
+        step = 0.4
         for j in range(maxVar):
             energy = energy2 = 0.0
             dE = 0.0
@@ -90,22 +90,22 @@ def monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim):
                 wfNew = waveFunction(alpha, betha, posNew)
                 
                 if(random() < wfNew**2/wfOld**2):
+                    
                     acceptCount += 1
                     posOld = posNew.copy()
                     wfOld = wfNew
                     dE = localEnergy(alpha,betha, posOld)
-                """
+                
                 acceptanceRate = acceptCount/k
-                if(acceptanceRate < 0.5):
-                    step -= 0.001
-                if(acceptanceRate > 0.5):
-                    step += 0.001
-                if(acceptanceRate == -1.0):
-                    print(j)
-                """    
+                if(acceptanceRate < idealAccept):
+                    step -= 0.5/N
+                if(acceptanceRate > idealAccept):
+                    step += 0.5/N
+               
+                   
                 energy += dE
                 energy2 += dE**2
-            
+            #print(acceptanceRate)
             
             energy /= N
             energy2 /= N
@@ -121,19 +121,19 @@ N = 1E4
 alpha = 0.4
 betha = 1.0
 maxVar = 10
-nParticle = 100
+nParticle = 500
 dim = 1
 
 start_time = time.time()
 Energies, alphaList, Vars = monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim)
 print(print("--- %s seconds ---" % (time.time() - start_time)))
 
-plt.plot(alphaList,Energies)
+plt.plot(alphaList[2:-1],Energies[2:-1])
 plt.xlabel('Alpha (AU)')
 plt.ylabel('Energy (hw)')
 plt.show()
 plt.close()
-plt.plot(alphaList,Vars)
+plt.plot(alphaList[2:-1],Vars[2:-1])
 plt.xlabel('Alpha (AU)')
 plt.ylabel('Variance (AU)')
 plt.show()
