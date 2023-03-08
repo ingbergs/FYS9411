@@ -38,6 +38,8 @@ def localEnergy(alpha, betha, r):
         E+=(len(r[0])*alpha-2*alpha**2*r2+0.5*r2)    
     return(E/len(r))        
 
+
+
 def d2 (alpha, betha, r, dx):
     return((waveFunction(alpha,betha,r+dx) - 2*waveFunction(alpha, betha, r) + waveFunction(alpha, betha, r-dx))/(dx**2))
 
@@ -55,7 +57,7 @@ def localEnergy_num(alpha, betha, r):
 def monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim):
     
     alphaList = np.zeros(maxVar)
-    step = 1.0 
+    step = .1
     Energies = np.zeros((maxVar,maxVar))
     Vars = np.zeros((maxVar,maxVar))
     posOld = np.zeros((nParticle, dim), np.double)
@@ -87,7 +89,7 @@ def monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim):
                 if(random() < wfNew**2/wfOld**2):
                     posOld = posNew.copy()
                     wfOld = wfNew
-                    dE = localEnergy_num(alpha,betha, posOld)
+                    dE = localEnergy(alpha,betha, posOld)
                 energy += dE
                 energy2 += dE**2
                 
@@ -104,12 +106,11 @@ def monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim):
 N = 1E4
 alpha = 0.3
 betha = 1.0
-maxVar = 40
-nParticle = 1
+maxVar = 10
+nParticle = 50
 dim = 1
 
 Energies, alphaList, Vars = monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim)
-
 
 plt.plot(alphaList,Energies)
 plt.xlabel('Alpha (AU)')
