@@ -48,14 +48,15 @@ def localEnergy_num(alpha, betha, r):
         for j in range(len(r[0])):
             r2+=r[i,j]**2
         
-        E+=0.5*(-d2(alpha, betha, r, 0.001)+r2)
+        E+=0.5*(-d2(alpha, betha, r, 0.0001)+r2)
     return E/len(r)  
         
 #montecarlo cycling starts here, using metropolis-algorithm without importance sampling 
 def monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim):
     
+    
     alphaList = np.zeros(maxVar)
-    step = 1.0 
+    
     Energies = np.zeros((maxVar,maxVar))
     Vars = np.zeros((maxVar,maxVar))
     posOld = np.zeros((nParticle, dim), np.double)
@@ -66,7 +67,7 @@ def monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim):
     for i in range(maxVar):
         alpha += 0.025
         alphaList[i] = alpha 
-        
+        step = 0.1
         for j in range(maxVar):
             energy = energy2 = 0.0
             dE = 0.0
@@ -78,19 +79,31 @@ def monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim):
                
             wfOld = waveFunction(alpha, betha, posOld)
             
-            for k in range(int(N)):
+            
+            acceptCount = 0
+            
+            for k in range(1,int(N)):
                 for iii in range(nParticle):
                     for jjj in range(dim):
                         posNew[iii, jjj] = posOld[iii,jjj] + step*(random()-0.5)
                 wfNew = waveFunction(alpha, betha, posNew)
                 
                 if(random() < wfNew**2/wfOld**2):
+                    acceptCount += 1
                     posOld = posNew.copy()
                     wfOld = wfNew
                     dE = localEnergy_num(alpha,betha, posOld)
+                
+                acceptanceRate = acceptCount/k
+                if(acceptanceRate < 0.5):
+                    step -= 0.001
+                if(acceptanceRate > 0.5):
+                    step += 0.001
+               
                 energy += dE
                 energy2 += dE**2
-                
+            
+            
             energy /= N
             energy2 /= N
             var = energy2-energy**2
@@ -102,10 +115,10 @@ def monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim):
 #main
 
 N = 1E4
-alpha = 0.3
+alpha = 0.4
 betha = 1.0
-maxVar = 40
-nParticle = 1
+maxVar = 10
+nParticle = 10
 dim = 1
 
 Energies, alphaList, Vars = monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim)
