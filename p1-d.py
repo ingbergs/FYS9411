@@ -48,8 +48,14 @@ def QuantumForce(r,alpha):
         qforce[i] = -4*alpha*r[i] ## ERLEND: 2 i stedet for 4
     return qforce
 
-def gradient():
-    return -2.5
+def derivative(r):
+    r_sum = 0
+    for i in range(NUMBER_OF_PARTICLES):
+        r2 = 0
+        for j in range(DIMENSION):
+            r2+=r[i,j]**2
+        r_sum += r2
+    return -r_sum
 
 def MonteCarlo(Energies, E_L):
     accept_rate=0
@@ -67,12 +73,14 @@ def MonteCarlo(Energies, E_L):
 
     seed()
 
-    a = 0.35
+    a = 0.3
     for ia in range(max_var):
         #a += 0.025
         alpha[ia] = a
         energy = 0
         energy2 = 0
+        Psi_deriv = 0
+        PsiE_deriv = 0
 
 
         # place the particles randomly
@@ -102,13 +110,18 @@ def MonteCarlo(Energies, E_L):
             #Metropolis test
             if random() < prob_rate:
                 for j in range(DIMENSION):
-                    pos_old[i,j] = pos_new[i,j]
+                    pos_old[i,j] = pos_new[i,j].copy()
                     qf_old[i,j] = qf_new[i,j]
                 psi_old = psi_new
                 deltaE = E_L(pos_old, a)
                 teller+=1
             energy += deltaE
             energy2 += deltaE**2
+
+            deltaPsi = derivative(pos_old)
+            Psi_deriv += deltaPsi
+            PsiE_deriv += deltaPsi*deltaE
+
 
         energy /= n_MCC
         energy2 /= n_MCC
@@ -118,14 +131,18 @@ def MonteCarlo(Energies, E_L):
         Variances[ia] = variance
         accept_rate+=teller/n_MCC
 
-        a -= gamma*gradient()
+        Psi_deriv /= n_MCC
+        PsiE_deriv /= n_MCC
+        gradient = 2*(PsiE_deriv - Psi_deriv*energy)
+
+        a -= gamma*gradient
     return Energies, alpha, accept_rate/max_var
 
 
 
-NUMBER_OF_PARTICLES = 2
+NUMBER_OF_PARTICLES = 1
 DIMENSION = 3
-max_var = 10
+max_var = 40
 alpha = np.zeros(max_var)
 Energies_a = np.zeros(max_var)
 #Energies_n = np.zeros(max_var)
@@ -139,8 +156,8 @@ print(accept_rate) #burde være ca 0.5-0.6, økes med mindre steglengde
 #Energies_n, alpha, accept_rate = MonteCarlo(Energies_n, local_energy_numerical)
 #print(accept_rate)
 
-
-plt.plot(alpha, Energies_a, label='Analytical')
+print('Optimized alpha:', alpha[-1], '      E =', Energies_a[-1])
+plt.plot(alpha, Energies_a, '-o', label='Analytical')
 #plt.plot(alpha, Energies_n, label='Numerical')
 plt.legend()
 plt.grid(True)
