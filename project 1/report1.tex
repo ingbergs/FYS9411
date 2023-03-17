@@ -1,0 +1,79 @@
+\documentclass{article}
+\usepackage[a4paper, total={6in, 8in}]{geometry}
+\usepackage{amsmath}
+
+\title{FYS9411 -- Project 1}
+\author{Ingvild Bergsbak}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+
+\section{Background}
+\subsection{Particle in harmonic trap}
+	\subsubsection{One particle}
+	\subsubsection{Many particles}
+	\subsubsection{Elliptic trap}
+\subsection{Variational Monte Carlo}
+\subsection{Importance sampling}
+\subsection{Steepest decent algorithm}
+
+\section{Analytic expressions}
+
+\subsection{Local energy, no interaction}
+1, 2 and 3 dimensions for 1 and $N$ particles.
+
+\subsubsection{One dimension}
+
+The local energy, $E_L$, and the Hamiltonian, $H$, is given by the general expression 
+
+$$E_L(\mathbf{r})=\frac{1}{\Psi_T(\mathbf{r})}H\Psi_T(\mathbf{r}) ,\quad H=\sum_{i}^{N}\frac{-\hbar^2}{2m}\nabla_i^2+\tfrac{1}{2}m\omega_{ho}^2r_i^2$$
+
+For one particle $\mathbf{r}$ becomes
+$$\mathbf{r}=x$$
+where $x$ is the coordinate of the particle. The wave function and Hamiltonian becomes 
+$$\Psi_T(\mathbf{r})=\Psi_T(x)=e^{-\alpha x^2}$$
+$$H=\frac{-\hbar^2}{2m}\frac{d^2}{dx^2}+\tfrac{1}{2}m\omega_{ho}^2x^2$$
+which gives the local energy
+$$E_L(x)=\frac{1}{\Psi_T(x)}H\Psi_T(x)=\frac{1}{e^{-\alpha x^2}}\Big(\frac{-\hbar^2}{2m}\frac{d^2}{dx^2}+\tfrac{1}{2}m\omega_{ho}^2x^2\Big)e^{-\alpha x^2}=\frac{\hbar^2}{m} \alpha x+\tfrac{1}{2}m\omega_{ho}^2x^2$$
+
+For $N$ particles $\mathbf{r}$ becomes
+$$\mathbf{r}=(x_1, x_2, ..., x_N)$$
+
+\subsection{Drift force}
+1, 2 and 3 dimensions.
+
+\subsection{Local energy, with interaction}
+3 dimensions for $N$ particles.
+
+\section{Calculating the ground state energy}
+
+\subsection{Variational Monte Carlo}
+Variational Monte Carlo: starts with trial wave function, varies the parameters of the wave function to find an energy minimum
+
+1, 2 and 3 dimensions, $N$=1, 10, 100, 500 (12 plot)
+
+\subsection{Importance sampling}
+1, 2 and 3 dimensions. Study the result as a function of the time step, $\delta t$
+Discuss differences between brute force (Metropolis) and importance sampling. 
+
+\subsection{Steepest decent algorithm}
+Finding optimal $\alpha$ before the Monte Carlo cycles. Compare the computation time.
+
+\subsection{Error analysis}
+
+\subsection{Parallelizing the code}
+Compare computation time.
+
+\subsection{Repulsive interaction}
+Elliptic trap, introducing length and energy units. Show new expression for the Hamiltonian. What is the expression for $\gamma$? Vary $\alpha$ for $N$=10, 50, 100 and compare to ideal case. Compare results to Refs.
+
+\subsection{Onebody densities}
+Compute the onebody density with and without the Jastrow factor, and discuss the importance of the correlations induced by the Jastrow factor.
+
+\section{Conclusion}
+Summarize results.
+
+\end{document}
