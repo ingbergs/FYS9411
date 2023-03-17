@@ -24,25 +24,50 @@ def localEnergy(alpha, betha, r):
         E+=(len(r[0])*alpha-2*alpha**2*r2+0.5*r2)    
     return(E/len(r))        
 
+#calculating the second derivative of the wavefunction for the nummerical solution
 def d2 (alpha, betha, r, dx):
-    return((waveFunction(alpha,betha,r+dx) - 2*waveFunction(alpha, betha, r) + waveFunction(alpha, betha, r-dx))/(dx**2))/waveFunction(alpha, betha, r)
+    div2 = 0
+    dx2 = dx**2
+    wF = waveFunction(alpha, betha, r)
+    for i in range(len(r)):
+        for j in range(len(r[i])):
+            r[i,j] += dx
+            wF1 = waveFunction(alpha, betha, r)
+            r[i,j] -=2*dx
+            wF2 = waveFunction(alpha, betha, r)
+            r[i,j] += dx
+            div2 += (wF1-2*wF+wF2)/dx2
+       
+            
+           
+            
+    return(div2/wF)
 
+#calculating the local energy nummericaly
 def localEnergy_num(alpha, betha, r):
     E = 0
+    r2 = 0
     for i in range(len(r)):
-        r2 = 0
+        
+        
         for j in range(len(r[0])):
             r2+=r[i,j]**2
-        
-        E+=0.5*(-d2(alpha, betha, r, 0.0001)+r2)
+            
+    E+=0.5*(-d2(alpha, betha, r, 0.000001)+r2)
     return E/len(r)  
   
+
+#calculating the quantum force for the general case without interaction   
 def qForce(alpha, betha, r):
     
     qF = np.zeros((len(r),len(r[0])), np.double)
-    qF[0] = -4*r[0]*alpha
+    for i in range(len(r)):
+        for j in range(len(r[i])    ):
+        
+            qF[i,j] = -2*r[i,j]*alpha
     return(qF)
 
+#calculating the wafeFuntion Derivative
 def wFD (r):
     wfDr = 0
     
@@ -53,7 +78,7 @@ def wFD (r):
         wfDr += (r2)
     return -wfDr        
 
-
+#checking if the change in alpha succeeds the threshold value, eps.
 def checkAlpha(a_old, a, eps):
     finished = False
     checkList = []
@@ -71,9 +96,9 @@ def checkAlpha(a_old, a, eps):
 def monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim):
     
     D = 0.5
-    TS = 0.001
-    lRate = 0.01
-    eps = 1E-5
+    TS = 0.1    
+    lRate = 0.005
+    eps = 5E-6
     f = maxVar
     
     alphaList = np.zeros(maxVar)
@@ -89,11 +114,10 @@ def monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim):
     seed()
     
     for i in range(maxVar):
-        #alpha += 0.025
+        alpha += 0.025
         if(finished):
-            print("j= " + str(j))
-            f = i
             break;
+            
         alphaList[i] = alpha 
         step = 1.
         wFDeriv = 0
@@ -135,7 +159,7 @@ def monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim):
                         wfOld = wfNew
                 
                 
-                dE = localEnergy(alpha,betha, posOld)
+                dE = localEnergy_num(alpha,betha, posOld)
                 energy += dE
                 energy2 += dE**2
                 
@@ -146,13 +170,12 @@ def monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim):
                 
                 acceptanceRate = acceptCount/(k*nParticle)
                 
-                
+                """
                 if(acceptanceRate < idealAccept):
                     TS -= .01/N
                 if(acceptanceRate > idealAccept):
                     TS += .01/N
-                
-           
+                """           
              
            
             
@@ -163,36 +186,37 @@ def monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim):
             wFEDeriv /= N
             grad = 2*(wFEDeriv-wFDeriv*energy)
             alpha_old = alpha
-            alpha -= lRate*grad
+            #alpha -= lRate*grad
             
-            if(checkAlpha(alpha_old, alpha, eps)):
-                finished = True
-                f = i
-                print(f)
-                break;
+            
             var = energy2-energy**2
             Energies[i,j] = energy    
             Vars[i,j] = var
             
+            if(checkAlpha(alpha_old, alpha, eps)):
+                finished = True
+                f = i
                 
-        print(acceptanceRate)
+                break;
+                
+        print(acceptanceRate, alpha)
         
     return(Energies, alphaList, Vars, f)
 
   
 #main
 
-N = 1E5
+N = 1E4
 alpha = 0.3
 betha = 1.0
-maxVar = 40
-nParticle = 1
-dim = 1 
+maxVar = 20
+nParticle  = 2
+dim = 3
 
 start_time = time.time()    
 Energies, alphaList, Vars, plotter = monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim)
 print(print("--- %s seconds ---" % (time.time() - start_time)))
-print("f= " + str(plotter))
+#print("Optimalized value of alpha = " + str(alphaList[plotter]) + " and it was found in " + str(plotter) + " steps")
 energyMean = []
 varMean = []
 
@@ -215,7 +239,7 @@ plt.ylabel('Energy (hw)')
 plt.show()
 plt.close()
 #plt.plot(alphaList[0:plotter],varMean[0:plotter])
-#plt.plot(alphaList, varMean)
+plt.plot(alphaList, varMean)
 plt.xlabel('Alpha (AU)')
 plt.ylabel('Variance (AU)')
 plt.close()
