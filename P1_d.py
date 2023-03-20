@@ -1,7 +1,9 @@
 import numpy as np
+from numpy.random import randint, randn
 import matplotlib.pyplot as plt
 from random import seed, random, normalvariate
-import time
+import time  
+from scipy.stats import norm
 
 
 #analytical expression for the wavefunction
@@ -90,23 +92,42 @@ def checkAlpha(a_old, a, eps):
     return finished
         
     
+def stat(data):
+    return np.mean(data)
+    
+def bootstrap(data, stats, R):
+    t = np.zeros(R)
+    n = len(data)
+    inds = np.arange(n);
     
     
+    for i in range(R):
+        t[i] = stat(data[randint(0,n,n)])
+        
+    return t
+def cutArray(array):
+    for i in range(0, len(array)):
+        if(array[i] == 0.0):
+            cut = i
+            break;
+    newArray = array[0:i].copy()
+    return newArray
+
 #montecarlo cycling starts here, using metropolis-algorithm without importance sampling 
 def monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim, solver):
     
     D = 0.5
-    TS = 0.1    
-    lRate = 0.05
-    eps = 1E-5
+    TS = 0.4   
+    lRate = 0.05     
+    eps = 1E-6  
     acceptEps = 0.1
     f = maxVar
     aRateChange = .01/N
     
     alphaList = np.zeros(maxVar)
     idealAccept = 0.5
-    Energies = np.zeros((maxVar,maxVar))
-    Vars = np.zeros((maxVar,maxVar))
+    Energies = np.zeros(maxVar)
+    Vars = np.zeros(maxVar)
     posOld = np.zeros((nParticle, dim), np.double)
     posNew = np.zeros((nParticle, dim), np.double)    
     
@@ -140,24 +161,24 @@ def monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim, solver):
             acceptCount = 0
             
             for k in range(1,int(N)):
-                for iii in range(nParticle):
-                    for jjj in range(dim):
+                for particle in range(nParticle):
+                    for dimension in range(dim):
                         
-                        posNew[iii, jjj] = posOld[iii,jjj]+normalvariate(0.0,1.0)*np.sqrt(TS)+qFOld[iii,jjj]*TS*D
+                        posNew[particle, dimension] = posOld[particle,dimension]+normalvariate(0.0,1.0)*np.sqrt(TS)+qFOld[particle,dimension]*TS*D
                     
                     wfNew = waveFunction(alpha, betha, posNew)
                     qFNew = qForce(alpha, betha, posNew)
                     GF = 0.0
-                    for HU in range(dim):
-                        GF += 0.5*(qFOld[iii,HU]+qFNew[iii,HU])*(D*TS*0.5*(qFOld[iii,HU]-qFNew[iii,HU])-posNew[iii,HU]+posOld[iii,HU])
+                    for dimension2 in range(dim):
+                        GF += 0.5*(qFOld[particle,dimension2]+qFNew[particle,dimension2])*(D*TS*0.5*(qFOld[particle,dimension2]-qFNew[particle,dimension2])-posNew[particle,dimension2]+posOld[particle,dimension2])
                     GF = np.exp(GF)  
                     ProbRat = GF*wfNew**2/wfOld**2    
                     if(random() <= ProbRat):
                         acceptCount += 1
-                        for jok in range(dim):
+                        for dimension3 in range(dim):
                         
-                            posOld[iii,jok] = posNew[iii,jok].copy()
-                            qFOld[iii,jok] = qFNew[iii,jok]
+                            posOld[particle,dimension3] = posNew[particle,dimension3].copy()
+                            qFOld[particle,dimension3] = qFNew[particle,dimension3]
                         wfOld = wfNew
                 
                 if(solver == "Nummerical"):
@@ -179,8 +200,8 @@ def monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim, solver):
                     TS -= aRateChange
                 if(acceptanceCheck > acceptEps):
                     TS += aRateChange
-                           
-             
+                         
+            
            
             
             energy /= N
@@ -194,15 +215,16 @@ def monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim, solver):
             
             
             var = energy2-energy**2
-            Energies[i,j] = energy    
-            Vars[i,j] = var
+            Energies[i] = energy    
+            Vars[i] = var
             
             if(checkAlpha(alpha_old, alpha, eps)):
                 finished = True
                 f = i
                 
                 break;
-                
+            
+       
         print(acceptanceRate, alpha)
         
     return(Energies, alphaList, Vars, f)
@@ -210,28 +232,51 @@ def monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim, solver):
   
 #main
 
-N = 5E3
+N = 1E4
 alpha = 0.3
 betha = 1.0
 maxVar = 40
-nParticle  = 10
+nParticle  = 5
 dim = 3
-
 start_time = time.time()    
 Energies, alphaList, Vars, plotter = monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim, "Analytical")
 Energies_num, alphaList_num, Vars_num, plotter_num = monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim, "Nummerical")
 print(print("--- %s seconds ---" % (time.time() - start_time)))
 
-#print("Optimalized value of alpha = " + str(alphaList[plotter]) + " and it was found in " + str(plotter) + " steps")
 
-    
+
+alphaList = cutArray(alphaList)
+alphaList_num = cutArray(alphaList_num)
+
+
+t = bootstrap(alphaList, stat, int(N)) 
+t_num = bootstrap(alphaList_num, stat, int(N))
+#print("Optimalized value of alpha = " + str(alphaList[plotter]) + " and it was found in " + str(plotter) + " steps")
+b = 80
+n, binsboot, patches = plt.hist(t, bins = b)
+n_num,binsboot_num, patches_num = plt.hist(t_num, bins = b, alpha=0.5)
+
+t_compare = t-t_num
+
+plt.legend(['Analytical', 'Nummerical'])
+
+plt.show();plt.close()
+plt.hist(t_compare, bins = b)
+plt.show();plt.close()    
+"""
+y = norm.pdf(binsboot, np.mean(t), np.std(t))
+lt = plt.plot(binsboot, y, 'r--', linewidth=1)
+plt.show()
+plt.close()
+"""
 energyMean = []
 varMean = []
 energyMean_num = []
 varMean_num = []
-
+ 
 nList = np.linspace(1, len(alphaList), len(alphaList))
 
+"""
 for i in range(len(Energies)):
     eSum = 0
     varSum = 0
@@ -246,20 +291,21 @@ for i in range(len(Energies)):
     varMean.append(varSum/len(Vars[i]))
     energyMean_num.append(eSum_num/len(Energies_num[i]))
     varMean_num.append(varSum_num/len(Vars_num[i]))
+"""
 
-
-plt.plot(alphaList[0:plotter],energyMean[0:plotter], 'x-')
-plt.plot(alphaList_num[0:plotter], energyMean_num[0:plotter], 'x-')
+plt.plot(alphaList[0:plotter],Energies[0:plotter], 'x-')
+plt.plot(alphaList_num[0:plotter], Energies_num[0:plotter], 'x-')
 plt.legend(['Analytical', 'Nummerical'])
 plt.xlabel('Alpha (AU)')
 plt.ylabel('Energy (hw)')
 plt.show()
 plt.close()
-#plt.plot(alphaList[0:plotter],varMean[0:plotter])
-plt.plot(alphaList, varMean)
+plt.plot(alphaList[0:plotter],Vars[0:plotter])
+plt.plot(alphaList_num[0:plotter],Vars_num[0:plotter])
+#plt.plot(alphaList, varMean)
 plt.xlabel('Alpha (AU)')
 plt.ylabel('Variance (AU)')
-plt.close()
 
-plt.plot(nList[0:plotter],alphaList[0:plotter], 'x-')
+
+#plt.plot(nList[0:plotter],alphaList[0:plotter], 'x-')
 plt.show()
