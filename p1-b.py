@@ -55,18 +55,19 @@ def local_energy_numerical(r, alpha):
     #deriv = deriv2(r, alpha, 0.01)
     #return -0.5*(1/psi)*deriv+0.5*r[0,0]**2
 
-def MonteCarlo(Energies, E_L):
+def MonteCarlo(Energies, Variances, E_L):
     accept_rate=0
-    n_MCC=10000
-    step_size = 0.5 #4.0
+    n_MCC=int(NUMBER_OF_MONTE_CARLO_CYCLES)
+    step_size = STEP_SIZE
+
     pos_old = np.zeros((NUMBER_OF_PARTICLES, DIMENSION), np.double)
     pos_new = np.zeros((NUMBER_OF_PARTICLES, DIMENSION), np.double)
 
     seed()
 
-    a = 0.2
-    for ia in range(max_var):
-        a += 0.05
+    a = ALPHA_INIT
+    for ia in range(MAX_VAR):
+        a += ALPHA_STEP
         print(f'Alpha {ia}:', a)
         alpha[ia] = a
         energy = 0
@@ -108,33 +109,70 @@ def MonteCarlo(Energies, E_L):
         error = np.sqrt(abs(variance)/n_MCC)
         Energies[ia] = energy
         Variances[ia] = variance
-        accept_rate+=teller/(n_MCC*NUMBER_OF_PARTICLES)
-    return Energies, alpha, accept_rate/max_var
+        accept_rate+=teller/(n_MCC)
+    return Energies, alpha, Variances, accept_rate/MAX_VAR
 
 
+# simulation parameters
+NUMBER_OF_PARTICLES = 500
+DIMENSION = 1
+MAX_VAR = 10
+NUMBER_OF_MONTE_CARLO_CYCLES = 1e4
+ALPHA_INIT = 0.2
+ALPHA_STEP = 0.05
+STEP_SIZE = 0.13
+    # 1P    1D: 4.0
+    # 10P   1D: 1.0
+    # 100P  1D: 0.3
+    # 500P  1D: 0.13    (/0.569)
 
-NUMBER_OF_PARTICLES = 2
-DIMENSION = 2
-max_var = 10
-alpha = np.zeros(max_var)
-Energies_a = np.zeros(max_var)
-Energies_n = np.zeros(max_var)
-Variances = np.zeros(max_var)
+    # 1P    2D: 2.5
+    # 10P   2D: 0.75    (0.513/0.518)
+    # 100P  2D: 0.2     (0.579/0.583)
+    # 500P  2D: 0.1     (/0.536) trenger 2 (eller 2.5???) e4 MCC for a fa min pa riktig sted
 
+    # 1P    3D: 2.0     (0.526/0.521)
+    # 10P   3D: 0.5     (0.593/0.594)
+    # 100P  3D: 0.15    (0.612/0.612)
+    # 500P  3D: 0.08    (/0.539) 5e4 (minimum neeesten pa 0.5)
+
+
+alpha = np.zeros(MAX_VAR)
+Energies_a = np.zeros(MAX_VAR)
+Energies_n = np.zeros(MAX_VAR)
+Variances_a = np.zeros(MAX_VAR)
+Variances_n = np.zeros(MAX_VAR)
+
+
+# calculate numerically
 start_time = time.time()
-
-Energies_n, alpha, accept_rate = MonteCarlo(Energies_n, local_energy_numerical)
-print('Numerical:', time.time()-start_time, 's, acceptance rate:', accept_rate)
+Energies_n, alpha, Variances_n, accept_rate_n = MonteCarlo(Energies_n, Variances_n, local_energy_numerical)
+time_n = time.time()-start_time
+time_n_out = time.strftime("%H:%M:%S", time.gmtime(time.time()-start_time))
+print('Numerical:', time_n_out, ', acceptance rate:', accept_rate_n)
 print()
-#print(accept_rate)
+
+
+# calculate analytically
 start_time = time.time()
-Energies_a, alpha, accept_rate = MonteCarlo(Energies_a, local_energy_analytical)
-print('Analytical:', time.time()-start_time, 's, acceptance rate:', accept_rate)
+Energies_a, alpha, Variances_a, accept_rate_a = MonteCarlo(Energies_a, Variances_a, local_energy_analytical)
+time_a = time.time()-start_time
+time_a_out = time.strftime("%H:%M:%S", time.gmtime(time.time()-start_time))
+print('Analytical:', time_a_out, ', acceptance rate:', accept_rate_a)
 print()
-#print(accept_rate) #burde være ca 0.5-0.6, økes med mindre steglengde
+
+
+# write to file
+f = open('b-'+str(NUMBER_OF_PARTICLES)+'P-'+str(DIMENSION)+'D.txt', 'w')
+f.write(str(time_a)+'    '+str(time_n)+'\n')
+f.write(str(accept_rate_a)+'    '+str(accept_rate_n)+'\n')
+f.write('alpha      E_a         E_n         v_a         v_n\n')
+for i in range(len(alpha)):
+    f.write(str(alpha[i])+'    '+str(Energies_a[i])+'    '+str(Energies_n[i])+'    '+str(Variances_a[i])+'    '+str(Variances_n[i])+'\n')
 
 
 
+# plot
 plt.plot(alpha, Energies_a, label='Analytical')
 plt.plot(alpha, Energies_n, label='Numerical')
 plt.legend()
@@ -143,7 +181,7 @@ plt.xlabel(r'$\alpha$')
 plt.ylabel('E')
 plt.show()
 
-plt.plot(alpha, Variances)
+plt.plot(alpha, Variances_a)
 plt.grid(True)
 plt.xlabel(r'$\alpha$')
 plt.ylabel(r'$\sigma$')
