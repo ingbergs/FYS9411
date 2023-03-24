@@ -80,18 +80,18 @@ def deriv_i(r, alpha, i):
         rj = r[j]
         rij = sqrt((ri[0]-rj[0])**2+(ri[1]-rj[1])**2+(ri[2]-rj[2])**2)
         if j != i:
-            t2 -= 2*a/(rij**4-a*rij**3)*(ri[0]**3-2*ri[0]**2*rj[0]+ri[0]*rj[0]**2 + ri[1]**3-2*ri[1]**2*rj[1]+ri[1]*rj[1]**2 + beta*(ri[2]**3-2*ri[2]**2*rj[2]+ri[2]*rj[2]**2))
+            t2 -= 4*alpha*2*a/(rij**4-a*rij**3)*(ri[0]**3-2*ri[0]**2*rj[0]+ri[0]*rj[0]**2 + ri[1]**3-2*ri[1]**2*rj[1]+ri[1]*rj[1]**2 + beta*(ri[2]**3-2*ri[2]**2*rj[2]+ri[2]*rj[2]**2))
 
             for k in range(NUMBER_OF_PARTICLES):
                 rk = r[k]
                 rik = sqrt((ri[0]-rk[0])**2+(ri[1]-rk[1])**2+(ri[2]-rk[2])**2)
                 if k != i:
-                    t3 += 1/((rij**4-a*rij**3)*(rik**4-a*rik**3))*(ri[0]**2-ri[0]*rk[0]-ri[0]*rj[0]+rj[0]*rk[0] + ri[1]**2-ri[1]*rk[1]-ri[1]*rj[1]+rj[1]*rk[1] + ri[2]**2-ri[2]*rk[2]-ri[2]*rj[2]+rj[2]*rk[2])**2
+                    t3 += 4*a**2/((rij**4-a*rij**3)*(rik**4-a*rik**3))*(ri[0]**2-ri[0]*rk[0]-ri[0]*rj[0]+rj[0]*rk[0] + ri[1]**2-ri[1]*rk[1]-ri[1]*rj[1]+rj[1]*rk[1] + ri[2]**2-ri[2]*rk[2]-ri[2]*rj[2]+rj[2]*rk[2])**2
 
             t4 += a/(rij**3-a*rij**2)*(a/rij-1)
 
-    t2 *= 4*alpha
-    t3 *= 4*a**2
+    #t2 *= 4*alpha
+    #t3 *= 4*a**2
 
     return (t1+t2+t3+t4)
 
@@ -202,7 +202,7 @@ def MonteCarlo(alpha, Energies, Variances, E_L):
     return Energies, alpha, Variances, accept_rate/MAX_VAR
 
 
-NUMBER_OF_PARTICLES = 3
+NUMBER_OF_PARTICLES = 10
 DIMENSION = 3
 MAX_VAR = 25
 NUMBER_OF_MONTE_CARLO_CYCLES = 1e3
