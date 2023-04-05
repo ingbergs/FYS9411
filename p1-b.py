@@ -23,9 +23,7 @@ def local_energy_analytical(r, alpha):
             r2+=r[i,j]**2
         E+=(DIMENSION*alpha-2*alpha**2*r2+0.5*r2)
     return E/NUMBER_OF_PARTICLES
-    #psi = Psi(r, alpha)
-    #deriv = (-2*alpha+4*alpha**2*r[0,0]**2)*psi
-    #return -0.5*(1/psi)*deriv+0.5*r[0,0]**2
+
 
 def deriv2(r, alpha, dx):
     d2 = 0
@@ -44,16 +42,13 @@ def deriv2(r, alpha, dx):
     #return (Psi(r-dx, alpha)-2*Psi(r, alpha)+Psi(r+dx, alpha))/(dx**2*Psi(r, alpha)*NUMBER_OF_PARTICLES)
 
 def local_energy_numerical(r, alpha):
-    E = 0
     r2 = 0
     for i in range(NUMBER_OF_PARTICLES):
         for j in range(DIMENSION):
             r2+=r[i,j]**2
-    E+=0.5*(-deriv2(r, alpha, 1e-6)+r2)
+    E=0.5*(-deriv2(r, alpha, 1e-6)+r2)
     return E/NUMBER_OF_PARTICLES
-    #psi = Psi(r, alpha)
-    #deriv = deriv2(r, alpha, 0.01)
-    #return -0.5*(1/psi)*deriv+0.5*r[0,0]**2
+
 
 def MonteCarlo(Energies, Variances, E_L):
     accept_rate=0
@@ -114,13 +109,13 @@ def MonteCarlo(Energies, Variances, E_L):
 
 
 # simulation parameters
-NUMBER_OF_PARTICLES = 500
+NUMBER_OF_PARTICLES = 10
 DIMENSION = 1
 MAX_VAR = 10
 NUMBER_OF_MONTE_CARLO_CYCLES = 1e4
 ALPHA_INIT = 0.2
 ALPHA_STEP = 0.05
-STEP_SIZE = 0.13
+STEP_SIZE = 1.0
     # 1P    1D: 4.0
     # 10P   1D: 1.0
     # 100P  1D: 0.3
