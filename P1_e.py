@@ -5,6 +5,7 @@ from random import seed, random, normalvariate, choices
 import time  
 from scipy.stats import norm
 from mpi4py import MPI
+import sys
 
 
 #analytical expression for the wavefunction
@@ -22,12 +23,13 @@ def localEnergy(alpha, betha, r):
     E = 0
     for i in range(len(r)):
         r2 = 0
-        for j in range(len(r[0])):
-            r2 += r[i,j]**2
+        for j in range(len(r[i])):
+            r2 += (r[i,j])**2
+            
         E+=(len(r[0])*alpha-2*alpha**2*r2+0.5*r2)    
     return(E/len(r))        
 
-#calculating the second derivative of the wavefunction for the nummerical solution
+#calculating the second derivative of the wavefunction for the numerical solution
 def d2 (alpha, betha, r, dx):
     div2 = 0
     dx2 = dx**2
@@ -40,21 +42,17 @@ def d2 (alpha, betha, r, dx):
             wF2 = waveFunction(alpha, betha, r)
             r[i,j] += dx
             div2 += (wF1-2*wF+wF2)/dx2
-       
-            
-           
             
     return(div2/wF)
 
-#calculating the local energy nummericaly
+#calculating the local energy numericaly
 def localEnergy_num(alpha, betha, r):
     E = 0
     r2 = 0
     for i in range(len(r)):
-        
-        
-        for j in range(len(r[0])):
-            r2+=r[i,j]**2
+          
+        for j in range(len(r[i])):
+            r2 += r[i,j]**2
             
     E+=0.5*(-d2(alpha, betha, r, 0.00001)+r2)
     return E/len(r)  
@@ -65,10 +63,10 @@ def qForce(alpha, betha, r):
     
     qF = np.zeros((len(r),len(r[0])), np.double)
     for i in range(len(r)):
-        for j in range(len(r[i])    ):
+        for j in range(len(r[i])):
         
-            qF[i,j] = -2*r[i,j]*alpha
-    return(qF)
+            qF[i,j] = r[i,j]*alpha
+    return(-2*qF)
 
 #calculating the wafeFuntion Derivative
 def wFD (r):
@@ -128,18 +126,20 @@ def cutArray(array):
 
 #montecarlo cycling starts here, using metropolis-algorithm without importance sampling 
 def monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim, solver):
-    
+    writer = open("NP_" + str(nParticle) + "_" + str(rank) + ".txt"  , 'w')
+    writer.write("Energy Var alpha error \n")
     D = 0.5
-    TS = 0.4   
-    lRate = 0.05     
-    eps = 1E-5  
-    acceptEps = 0.1
+    TS = 0.1   
+    lRate = 0.04     
+    eps = 1E-4  
+    acceptEps = 0.06
     f = maxVar
-    aRateChange = .01/N
+    aRateChange = .1/N
     
     alphaList = np.zeros(maxVar)
     idealAccept = 0.5
     Energies = np.zeros(maxVar)
+    error = np.zeros(maxVar)
     Vars = np.zeros(maxVar)
     posOld = np.zeros((nParticle, dim), np.double)
     posNew = np.zeros((nParticle, dim), np.double)    
@@ -173,7 +173,7 @@ def monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim, solver):
             
             acceptCount = 0
             
-            for k in range(1,int(N)):
+            for k in range(0,int(N)):
                 for particle in range(nParticle):
                     for dimension in range(dim):
                         
@@ -206,14 +206,14 @@ def monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim, solver):
                 wFEDeriv += dWf*dE
                 
                 
-                acceptanceRate = acceptCount/(k*nParticle)
+                acceptanceRate = acceptCount/((k+1)*nParticle)
                 acceptanceCheck = acceptanceRate-idealAccept
                 
                 if(acceptanceCheck < -acceptEps):
                     TS -= aRateChange
                 if(acceptanceCheck > acceptEps):
                     TS += aRateChange
-                         
+                                
             
            
             
@@ -228,8 +228,7 @@ def monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim, solver):
             
             
             var = energy2-energy**2
-            Energies[i] = energy    
-            Vars[i] = var
+            errorVar = np.sqrt(var/N)
             
             if(checkAlpha(alpha_old, alpha, eps)):
                 finished = True
@@ -237,53 +236,148 @@ def monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim, solver):
                 
                 break;
             
-       
-        #print(acceptanceRate, alpha)
+        writer.write(str(energy) + " " + str(var) + " " + str(alpha) + " " + str(errorVar) +  '\n')    
         
-    return(Energies, alphaList, Vars, f)
+        Energies[i] = energy    
+        Vars[i] = var
+        error[i] = errorVar
+    #print(acceptanceRate, alpha)
+    
+
+    meanEnergy = stat(Energies)
+    #Vars = stat(Vars)
+    
+    writer.write("Number of cycles = " + str(f))
+    writer.close()
+    print(str(nParticle), " particles done")
+    return(Energies, Vars, f, alphaList)
 
   
 #main
 
-N = 1E3
-alpha = 0.3
-betha = 1.0
-maxVar = 20
-nParticle  = 2
+
+
+N = 1E4
+alpha = 0.30
+betha = 1
+maxVar = 500  
+nParticle  = int(sys.argv[1])  
+
 dim = 3
 start_time = time.time()    
-Energies, alphaList, Vars, plotter = monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim, "Analytical")
+#Energies,  Vars, plotter, alphaList = monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim, "Analytical")
 
+#print(plotter, alphaList[plotter])
+#plt.plot(alphaList[0:plotter],Energies[0:plotter], 'x-')
+#plt.show()
+"""
 dataFile = 'AlphaBootstrap.txt'
 f = open(dataFile, 'w')
 f.close()
 f = open(dataFile, 'a')
+"""
 
 #MPI
 comm = MPI.COMM_WORLD
-rank = comm.rank
+numProc = comm.Get_size()
 
-if (rank == 0):
-    data = N
-else: 
-    data = None
-numProc = 4
-data = comm.bcast(data)
-totalNumCycles = N*numProc
- 
-for i in range(10):
-    
-    alpha += 0.025
-    totalEnergy = totalEnergySquared = localProcessEnergy = localProcessEnergy2 = 0
-    Energies_num, alphaList_num, Vars_num, plotter_num = monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim, "Nummerical")
-    comm.reduce(Energies_num, MPI.SUM, 0)
-    #comm.reduce([localProcessEnergy2, totalEnergySquared], MPI.SUM, 0)
+if(numProc > 1):
+
+    rank = comm.rank
+
     if (rank == 0):
-        totalEnergy += Energies_num
-print(totalEnergy)    
-#print('rank',rank,data)
-MPI.Finalize()
+        data = N
+    else: 
+        data = None
 
+    nMPI_cycles = 8
+    data = comm.bcast(data)
+
+    totalEnergy = totalEnergySquared = localProcessEnergy = localProcessEnergy2 = 0 
+    
+    varPar = np.zeros([5,nMPI_cycles])
+    
+    error = np.zeros(nMPI_cycles)
+    Energies_num = np.zeros(nMPI_cycles)
+    alphaList = np.zeros(nMPI_cycles)
+    Vars_num = np.zeros(nMPI_cycles)
+    
+    
+    
+    
+    for i in range(1):
+        #alphaList[i] = alpha
+        energy, Var, plotter, alphaList = monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim, "Analytical")
+        #alpha += 0.025
+        
+        #energy_num, Var_num, plotter_num = monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim, "Nummerical")
+        
+        #varPar[0,i] = energy
+        #varPar[1,i] = Var
+        #varPar[2,i] = energy_num
+        #varPar[3,i] = Var_num
+        #varPar[4,i] = alphaList_MPI
+        
+        
+        
+        #energy = comm.reduce(energy, MPI.SUM, 1)/numProc
+        
+        
+    """
+    if (rank == 0):    
+        plt.plot(alphaList[0:plotter], energy[0:plotter], 'o-', color = 'g', linewidth = 3)
+        print(alphaList[plotter])
+        plt.show()
+    "
+    f = comm.reduce(plotter, MPI.SUM, 0)/numProc
+    #print(energy, alphaList)
+    
+    #print('rank',rank,data)
+    
+    #comm.reduce([localProcessEnergy2, totalEnergySquared], MPI.SUM, 0)
+    #totalVars = comm.reduce(Vars_num,MPI.SUM, 0)/numProc
+    #varPar = comm.reduce(varPar, MPI.SUM, 0)/numProc 
+    totCycle = "{:.1e}".format(maxVar*nMPI_cycles*numProc*N)
+
+    print("Total number of cycles =", totCycle)  
+#print(Energies_num, alphaList_MPI)    
+    
+    MPI.Finalize()
+    
+    
+    
+    print(print("--- %s seconds ---" % (time.time() - start_time)))
+    f = open("N=" + str(nParticle) + ".txt", 'w')
+    f.write("energy Var energy_num Var_num Alpha \n")
+    #for j in range(len(alphaList_MPI)):
+        #f.write(str(round(varPar[0][j],4)) + " " + str(round(varPar[1][j],4)) + " " + str(round(varPar[2][j],4)) + " " + str(round(varPar[3][j],4)) + " " + str(round(alphaList_MPI[j],4)) + " \n")
+    f.write("--- %s seconds ---" % (time.time() - start_time))
+    f.close()
+    
+    
+    
+    plt.plot(alphaList, varPar[0], 'o-', color = 'g', linewidth = 3)
+    #plt.plot(alphaList_MPI, varPar[2], 'x-', color = 'r', linewidth = 3, alpha = 0.7)
+    plt.tick_params(top=True,labelright=True,right=True,direction='in',which = 'both', labelsize = 15)
+    
+    plt.xlabel(r'$\alpha$ $(Å^{-1})$', size = '20')
+    plt.ylabel(r'Energy ($\hbar \omega$)', size = '20')
+    plt.title(str(nParticle) + ' particle(s) in ' + str(dim) + ' dimension(s) calculated from ' + str(totCycle) + ' Monte Carlo cycles using importance sampling', size = '22')  
+    plt.legend(['Analytical', 'Numerical'], fontsize = '20')
+    plt.savefig(str(nParticle) + 'P' + str(dim) + 'D_energy.eps')
+    plt.show();plt.close()
+    
+    plt.plot(alphaList, varPar[1], 'o-', color = 'g', linewidth = 3)
+    #plt.plot(alphaList_MPI, varPar[3], 'x-', color = 'r', linewidth = 3, alpha = 0.7) 
+    plt.tick_params( top=True,labelright=True,right=True,direction='in',which = 'both', labelsize = 15)
+    plt.xlabel(r'$\alpha$ $(Å^{-1})$', size = '20')
+    plt.ylabel(r'Variance ($\sigma^2$)', size = '20')
+    plt.title(str(nParticle) + ' particle(s) in ' + str(dim) + ' dimension(s) calculated from ' + str(totCycle) + ' Monte Carlo cyclesusing importance sampling', size = '22')
+    plt.legend(['Analytical', 'Numerical'], fontsize = '20')
+    plt.savefig(str(nParticle) + 'P' + str(dim) + 'D_var.eps')    
+    plt.show();plt.close()
+    """
+    
 """
 for i in range(1):
 
@@ -292,8 +386,6 @@ for i in range(1):
     f.write(str(alphaList_num[-1]) + '\n')
 f.close()    
 """
-    
-print(print("--- %s seconds ---" % (time.time() - start_time)))
 
 """
 t = (bootstrap(dataFile, 100))
@@ -325,7 +417,7 @@ y = norm.pdf(binsboot, np.mean(t), np.std(t))
 lt = plt.plot(binsboot, y, 'r--', linewidth=1)
 plt.show()
 plt.close()
-"""
+
 energyMean = []
 varMean = []
 energyMean_num = []
@@ -333,7 +425,7 @@ varMean_num = []
  
 nList = np.linspace(1, len(alphaList), len(alphaList))
 
-"""
+
 for i in range(len(Energies)):
     eSum = 0
     varSum = 0

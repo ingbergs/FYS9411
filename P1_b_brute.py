@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from random import seed, random, normalvariate, choices
 import time  
 from scipy.stats import norm
-from mpi4py import MPI
+#from mpi4py import MPI
 import sys
 
 
@@ -13,24 +13,19 @@ def waveFunction(alpha, betha, r):
     wF = 1
     for i in range(len(r)):
         r2 = 0
-        for j in range(len(r[0])):
-            if(j == 2):
-                r2 += (betha*r[i,j])**2
-            else:
-                r2 += r[i,j]**2
+        for j in range(len(r[i])):
+            r2 += r[i,j]**2
         wF *= np.exp(-alpha*r2)
     return(wF)    
     
 #analytical expression for the local energy of one boson in 1D     
 def localEnergy(alpha, betha, r):
     E = 0
+    
     for i in range(len(r)):
         r2 = 0
         for j in range(len(r[i])):
-            if(j == 2):
-                r2 += (betha*r[i,j])**2
-            else:
-                r2 += r[i,j]**2
+            r2 += r[i,j]**2
         E+=(len(r[0])*alpha-2*alpha**2*r2+0.5*r2)    
     return(E/len(r))        
 
@@ -158,9 +153,9 @@ def monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim, solver):
     seed()
     
     for i in range(maxVar):
-        #alpha += 0.025
-        if(finished):
-            break;
+        alpha += 0.025
+        #if(finished):
+            #break;
             
         alphaList[i] = alpha 
         step = 1.
@@ -190,22 +185,18 @@ def monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim, solver):
                                            
                     if(random() < wfNew**2/wfOld**2):
                         acceptCount += 1
-                        for dimension3 in range(dim):
-                        
-                            posOld[particle,dimension3] = posNew[particle,dimension3].copy()
+                        for dim2 in range(dim):
+                            posOld[particle,dim2] = posNew[particle,dim2]
                             
-                        wfOld = wfNew
-                
-                if(solver == "Nummerical"):
+                        wfOld = wfNew.copy()
+                    
+                if(solver == "Numerical"):
                     dE = localEnergy_num(alpha,betha, posOld)
                 if(solver == "Analytical"):
                     dE = localEnergy(alpha,betha, posOld)
                 energy += dE
                 energy2 += dE**2
-                
-              
-                
-             
+                 
                 
                 """
                 acceptanceRate = acceptCount/(k*nParticle)
@@ -216,56 +207,60 @@ def monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim, solver):
                 if(acceptanceCheck > acceptEps):
                     TS += aRateChange
                 """         
-            
-           
-            
-            energy /= N
-            energy2 /= N
-            
-            
-            
-            
-            var = energy2-energy**2
-            Energies[i] = energy    
-            Vars[i] = var
+                      
+        energy /= N
+        energy2 /= N
+        var = energy2-energy**2
+        Energies[i] = energy    
+        Vars[i] = var
             
             
        
     
     #print(acceptanceRate, alpha)
     
-
+    
     meanEnergy = stat(Energies)
     Vars = stat(Vars)
     
     
-    return(meanEnergy, alphaList, Vars, f)
+    return(Energies, alphaList, Vars, f)
 
   
 #main
 
 
 
-N = 1E4
-alpha = 0.3
+N =1E6
+alpha = 0.4
 betha = 1
-maxVar = 5
-nParticle  = int(sys.argv[1])
+maxVar = 10
+nParticle  = 3
 
 dim = 3
 start_time = time.time()    
-#Energies, alphaList, Vars, plotter = monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim, "Analytical")
+Energies, alphaList, Vars, plotter = monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim, "Analytical")
+
+plt.plot(alphaList, Energies, 'o-', color = 'g', linewidth = 3)
+#plt.plot(alphaList_MPI, varPar[3], 'x-', color = 'r', linewidth = 3, alpha = 0.7) 
+plt.tick_params( top=True,labelright=True,right=True,direction='in',which = 'both', labelsize = 15)
+plt.xlabel(r'$\alpha$ $(Å^{-1})$', size = '20')
+plt.ylabel(r'Variance ($\sigma^2$)', size = '20')
+#plt.title(str(nParticle) + ' particle(s) in ' + str(dim) + ' dimension(s) calculated from ' + str(totCycle) + ' Monte Carlo cyclesusing importance sampling', size = '22')
+plt.legend(['Analytical', 'Numerical'], fontsize = '20')
+#plt.savefig(str(nParticle) + 'P' + str(dim) + 'D_var.eps')    
+plt.show();plt.close()
 """
 dataFile = 'AlphaBootstrap.txt'
 f = open(dataFile, 'w')
 f.close()
 f = open(dataFile, 'a')
-"""
+
 #MPI
 comm = MPI.COMM_WORLD
 numProc = comm.Get_size()
 
-if(numProc > 1):
+if(numProc > 0):
 
     rank = comm.rank
 
@@ -274,11 +269,10 @@ if(numProc > 1):
     else: 
         data = None
 
-    nMPI_cycles = 16
+    nMPI_cycles = 9
     data = comm.bcast(data)
 
-    totalEnergy = totalEnergySquared = localProcessEnergy = localProcessEnergy2 = 0 
-    
+      
     varPar = np.zeros([4,nMPI_cycles])
     
     Energies_num = np.zeros(nMPI_cycles)
@@ -290,13 +284,13 @@ if(numProc > 1):
     
     for i in range(nMPI_cycles):
         alpha += 0.025
-        energy, alphaList, Var, plotter = monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim, "Analytical")
-        energy_num, alphaList_num, Var_num, plotter_num = monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim, "Nummerical")
+        energy, Var, plotter = monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim, "Analytical")
+        #energy_num,  Var_num, plotter_num = monteCarlo_metropolis(N, alpha, betha, maxVar, nParticle, dim, "Numerical")
         
         varPar[0,i] = energy
         varPar[1,i] = Var
-        varPar[2,i] = energy_num
-        varPar[3,i] = Var_num
+        #varPar[2,i] = energy_num
+        #varPar[3,i] = Var_num
                 
         alphaList_MPI[i] = alpha
         
@@ -307,8 +301,9 @@ if(numProc > 1):
     #totalVars = comm.reduce(Vars_num,MPI.SUM, 0)/numProc
     varPar = comm.reduce(varPar, MPI.SUM, 0)/numProc 
     
-
-    print("Total number of cycles =", maxVar*nMPI_cycles*numProc*N)  
+    totCycle = "{:.1e}".format(maxVar*nMPI_cycles*numProc*N)
+    print("Total number of cycles =", totCycle) 
+    print(print("--- %s seconds ---" % (time.time() - start_time)))    
 #print(Energies_num, alphaList_MPI)    
 
     MPI.Finalize()
@@ -319,8 +314,28 @@ if(numProc > 1):
     f.write("--- %s seconds ---" % (time.time() - start_time))
     f.close()
     
-    print(print("--- %s seconds ---" % (time.time() - start_time)))
-    """
+    plt.plot(alphaList_MPI, varPar[0], 'o-', color = 'g', linewidth = 3)
+    #plt.plot(alphaList_MPI, varPar[2], 'x-', color = 'r', linewidth = 3, alpha = 0.7)
+    plt.tick_params(top=True,labelright=True,right=True,direction='in',which = 'both', labelsize = 15)
+    
+    plt.xlabel(r'$\alpha$ $(Å^{-1})$', size = '20')
+    plt.ylabel(r'Energy ($\hbar \omega$)', size = '20')
+    plt.title(str(nParticle) + ' particle(s) in ' + str(dim) + ' dimension(s) calculated from ' + str(totCycle) + ' Monte Carlo cycles using importance sampling', size = '22')  
+    plt.legend(['Analytical', 'Numerical'], fontsize = '20')
+    plt.savefig(str(nParticle) + 'P' + str(dim) + 'D_energy.eps')
+    plt.show();plt.close()
+    
+    plt.plot(alphaList_MPI, varPar[1], 'o-', color = 'g', linewidth = 3)
+    #plt.plot(alphaList_MPI, varPar[3], 'x-', color = 'r', linewidth = 3, alpha = 0.7) 
+    plt.tick_params( top=True,labelright=True,right=True,direction='in',which = 'both', labelsize = 15)
+    plt.xlabel(r'$\alpha$ $(Å^{-1})$', size = '20')
+    plt.ylabel(r'Variance ($\sigma^2$)', size = '20')
+    plt.title(str(nParticle) + ' particle(s) in ' + str(dim) + ' dimension(s) calculated from ' + str(totCycle) + ' Monte Carlo cyclesusing importance sampling', size = '22')
+    plt.legend(['Analytical', 'Numerical'], fontsize = '20')
+    plt.savefig(str(nParticle) + 'P' + str(dim) + 'D_var.eps')    
+    plt.show();plt.close()
+"""
+"""
     plt.plot(alphaList_MPI, varPar[0], 'o-')
     plt.plot(alphaList_MPI, varPar[2], 'o-')
     plt.legend(['Analytical', 'Numerical'])
