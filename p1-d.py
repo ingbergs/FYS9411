@@ -3,6 +3,8 @@ from math import exp, sqrt
 from random import random, seed, normalvariate
 import matplotlib.pyplot as plt
 import time
+import multiprocessing
+
 
 def Psi(r, alpha):
     product = 1
@@ -83,12 +85,14 @@ def MonteCarlo(alphas, Energies, Variances, E_L):
     alpha = ALPHA_INIT
     for ia in range(MAX_VAR):
         #a += 0.025
+        #if Finished:
+        #    break;
         alphas[ia] = alpha
         energy = 0
         energy2 = 0
         Psi_deriv = 0
         PsiE_deriv = 0
-
+        #Iterations += 1
 
         # place the particles randomly
         for i in range(NUMBER_OF_PARTICLES):
@@ -101,6 +105,7 @@ def MonteCarlo(alphas, Energies, Variances, E_L):
 
         teller=0
         for MCC in range(n_MCC):
+
             # create a trial for new position
             for i in range(NUMBER_OF_PARTICLES):
                 for j in range(DIMENSION):
@@ -141,6 +146,7 @@ def MonteCarlo(alphas, Energies, Variances, E_L):
         Psi_deriv /= n_MCC
         PsiE_deriv /= n_MCC
         gradient = 2*(PsiE_deriv - Psi_deriv*energy)
+
 
         alpha-= gamma*gradient
     return Energies, alphas, Variances, accept_rate/MAX_VAR
@@ -207,6 +213,83 @@ plt.show()
 
 """
 start_time = time.time()
+
+def maining(Energies, Variances, solver, procnum , return_dict):
+    Solution = MonteCarlo(Energies, Variances, solver)
+    return_dict[procnum] = Solution
+def meanResults(results):
+    iterations = 0
+    EnergyL = (results[0][0])
+    alphaL = (results[0][1])
+    VarL = (results[0][2])
+    for i in range(len(results)):
+
+        if(float(results[i][3]) != 0):
+            iterations += float(results[i][3])
+    #print(iterations/len(results))
+
+    return(EnergyL, alphaL, VarL, iterations)
+
+if __name__ == "__main__":
+
+
+    start_time = time.time()
+
+    manager = multiprocessing.Manager()
+    return_dict_analytical = manager.dict()
+    return_dict_numerical = manager.dict()
+    jobs_analytical = []
+    jobs_numerical = []
+
+
+
+    for i in range(6):
+
+        an = multiprocessing.Process(target=maining, args=(Energies_a, Variances_a, local_energy_analytical, i, return_dict_analytical))
+        time_a = time.time()-start_time
+        nu = multiprocessing.Process(target=maining, args=(Energies_n, Variances_n, local_energy_numerical, i, return_dict_numerical))
+        time_n = time.time()-time_a
+        jobs_analytical.append(an)
+        jobs_numerical.append(nu)
+        an.start()
+        nu.start()
+
+
+
+    for proc in jobs_analytical:
+        proc.join()
+    for proc in jobs_numerical:
+        proc.join()
+
+    #d
+
+    EV_a = meanResults(return_dict_analytical)
+    EV_n = meanResults(return_dict_numerical)
+    alphaList_a = return_dict_analytical[0][1]
+    alphaList_n = return_dict_numerical[0][1]
+    accept_rate_a = return_dict_analytical[0][3]
+    accept_rate_n = return_dict_numerical[0][3]
+
+    plt.plot(EV_a[1], EV_a[0], 'x-')
+    plt.plot(EV_n[1], EV_n[0], 'x-')
+    plt.show()
+
+
+    # write to file
+    f = open('d-'+str(NUMBER_OF_PARTICLES)+'P-'+str(DIMENSION)+'D.txt', 'w')
+    f.write(str(time_a)+'    '+str(time_n)+'\n')
+    f.write(str(accept_rate_a)+'    '+str(accept_rate_n)+'\n')
+    f.write('alphaList_a     alphaList_n    E_a         E_n         v_a         v_n \n')
+    for i in range(len(EV_a[0])):
+        f.write(str(EV_a[1][i])+'    '+str(EV_n[1][i])+'   '+str(EV_a[0][i])+'    '+str(EV_n[0][i])+'    '+str(EV_a[2][i])+'    '+str(EV_n[2][i])+'\n')
+
+
+    f= open('e-'+str(NUMBER_OF_PARTICLES)+'P-'+str(DIMENSION)+'D.txt', 'w')
+    f.write('alphaList_a     alphaList_n    E_a         E_n         v_a         v_n \n')
+    for i in range(len(return_dict_analytical)):
+        f.write(str(return_dict_analytical[i][1])+'   '+str(return_dict_numerical[i][1])+'   '+str(return_dict_analytical[i][0])+'   '+str(return_dict_numerical[i][0]))
+
+
 
 Energies_a, alpha, accept_rate = MonteCarlo(Energies_a, local_energy_analytical)
 print(time.time()-start_time, 's')
