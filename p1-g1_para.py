@@ -129,24 +129,30 @@ def MonteCarlo(Energies, Variances, E_L):
     n_MCC=int(NUMBER_OF_MONTE_CARLO_CYCLES)
     D=0.5
     gamma = GAMMA #0.01
-
+    eps = 2E-4
+    Finished = False
+    
     pos_old = np.zeros((NUMBER_OF_PARTICLES, DIMENSION), np.double)
     pos_new = np.zeros((NUMBER_OF_PARTICLES, DIMENSION), np.double)
     qf_old = np.zeros((NUMBER_OF_PARTICLES, DIMENSION), np.double)
     qf_new = np.zeros((NUMBER_OF_PARTICLES, DIMENSION), np.double)
 
     seed()
-    Iterations = 0
+    Iterations = float(0)
     a = ALPHA_INIT
     for ia in range(MAX_VAR):
+        
         #a += 0.025
-        alpha[ia] = a
+        
+        if(Finished):
+            break;
+        alpha[ia] = a    
         energy = 0
         energy2 = 0
         Psi_deriv = 0
         PsiE_deriv = 0
         Iterations += 1
-
+        
         # place the particles randomly
         for i in range(NUMBER_OF_PARTICLES):
             for j in range(DIMENSION):
@@ -201,21 +207,23 @@ def MonteCarlo(Energies, Variances, E_L):
         
         a_old = a
         a -= gamma*gradient
-        print(a)
+        
+        
         if(abs(a_old-a) <= eps):
-            Iterations *= n_MCC
+            Iterations *= float(n_MCC)
             Finished = True
-    
-    return Energies, alpha, Variances, Iterations, accept_rate/max_var
+        print(a)
+    return Energies, alpha, Variances, Iterations, accept_rate/MAX_VAR
 
 
-NUMBER_OF_PARTICLES = 1
+NUMBER_OF_PARTICLES = 100
 DIMENSION = 3
-MAX_VAR = 50
-NUMBER_OF_MONTE_CARLO_CYCLES = 1e3
-ALPHA_INIT = 0.3
-dt=0.5 #2.6
-GAMMA = 0.025
+MAX_VAR = 100
+NUMBER_OF_MONTE_CARLO_CYCLES = 2e2
+ALPHA_INIT = 1.0
+dt=0.1
+#2.6
+GAMMA = 0.1/NUMBER_OF_PARTICLES   
     # 1P:   0.025
     # 10P:
     # 100P:
@@ -223,21 +231,14 @@ GAMMA = 0.025
 beta = 2.82843
 a = 0.0043
 
-alpha_n = np.zeros(MAX_VAR)
-alpha_a = np.zeros(MAX_VAR)
+alpha = np.zeros(MAX_VAR)
+
 Energies_a = np.zeros(MAX_VAR)
 Energies_n = np.zeros(MAX_VAR)
 Variances_a = np.zeros(MAX_VAR)
 Variances_n = np.zeros(MAX_VAR)
 
-NUMBER_OF_PARTICLES = 100
-DIMENSION = 3
-max_var = 50
-alpha = np.zeros(max_var)
-Energies_a = np.zeros(max_var)
-Energies_n = np.zeros(max_var)
-Variances_a = np.zeros(max_var)
-Variances_n = np.zeros(max_var)
+
 
 start_time = time.time()
 
@@ -253,7 +254,7 @@ def meanResults(results):
         
         if(float(results[i][3]) != 0):
             iterations += float(results[i][3])
-    print(iterations/len(results))
+    #print(iterations/len(results), iterations)
     
     return(EnergyL, alphaL, VarL, iterations)
 
@@ -301,7 +302,7 @@ if __name__ == "__main__":
     
     
     # write to file
-    f = open('d-'+str(NUMBER_OF_PARTICLES)+'P-'+str(DIMENSION)+'D.txt', 'w')
+    f = open('g-'+str(NUMBER_OF_PARTICLES)+'P-'+str(DIMENSION)+'D.txt', 'w')
     f.write(str(time_a)+'    '+str(time_n)+'\n')
     f.write(str(accept_rate_a)+'    '+str(accept_rate_n)+'\n')
     f.write('alphaList_a     alphaList_n    E_a         E_n         v_a         v_n \n')
@@ -340,7 +341,7 @@ for i in range(len(alpha)):
     f.write(str(alpha_a[i])+'    '+alpha_n[i])+'    '+str(Energies_a[i])+'    '+str(Energies_n[i])+'    '+str(Variances_a[i])+'    '+str(Variances_n[i])+'\n')
 """
 
-
+"""
 # plot
 plt.plot(alpha_a, Energies_a, '-o', label='Analytical')
 plt.plot(alpha_n, Energies_n, '-o', label='Numerical')
@@ -355,7 +356,7 @@ plt.grid(True)
 plt.xlabel(r'$\alpha$')
 plt.ylabel(r'$\sigma$')
 plt.show()
-
+"""
 """
 start_time = time.time()
 
