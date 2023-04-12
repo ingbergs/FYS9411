@@ -152,7 +152,7 @@ def MonteCarlo(Energies, E_L):
 
 
 
-NUMBER_OF_PARTICLES = 1
+NUMBER_OF_PARTICLES = 100
 DIMENSION = 3
 max_var = 25
 alpha = np.zeros(max_var)
@@ -160,7 +160,7 @@ Energies_a = np.zeros(max_var)
 Energies_n = np.zeros(max_var)
 Variances = np.zeros(max_var)
 
-f = open('energy.txt', 'w')
+f = open('energy-100P-3D.txt', 'w')
 for i in range(2**9): #2^9=512
     Energies_n, alpha, accept_rate = MonteCarlo(Energies_n, local_energy_numerical)
     f.write(str(Energies_n[-1])+'\n')

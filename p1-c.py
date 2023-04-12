@@ -23,10 +23,6 @@ def local_energy_analytical(r, alpha):
         E+=(1-4*alpha**2)*r2
     return DIMENSION*alpha+0.5*E/NUMBER_OF_PARTICLES
 
-    #psi = Psi(r, alpha)
-    #deriv = (-2*alpha+4*alpha**2*r[0,0]**2)*psi
-    #return -0.5*(1/psi)*deriv+0.5*r[0,0]**2
-
 def deriv2(r, alpha, dx):
     d2 = 0
     dx2 = dx**2
@@ -42,16 +38,13 @@ def deriv2(r, alpha, dx):
     return d2/psi
 
 def local_energy_numerical(r, alpha):
-    E = 0
     r2 = 0
     for i in range(NUMBER_OF_PARTICLES):
         for j in range(DIMENSION):
             r2+=r[i,j]**2
-    E+=0.5*(-deriv2(r, alpha, 1e-6)+r2)
+    E=0.5*(-deriv2(r, alpha, 1e-6)+r2)
     return E/NUMBER_OF_PARTICLES
-    #psi = Psi(r, alpha)
-    #deriv = deriv2(r, alpha, 0.01)
-    #return -0.5*(1/psi)*deriv+0.5*r[0,0]**2
+
 
 def QuantumForce(r,alpha):
     qforce = np.zeros((NUMBER_OF_PARTICLES, DIMENSION), np.double)
@@ -60,12 +53,12 @@ def QuantumForce(r,alpha):
             qforce[i,j] = -4*alpha*r[i,j] ## ERLEND: 2 i stedet for 4
     return qforce
 
-def MonteCarlo(Energies, E_L):
+def MonteCarlo(Energies, Variances, E_L):
     accept_rate=0
-    n_MCC=10000
-    step_size = 1.0 #4.0
-    dt=0.1 #2.6
+    n_MCC=int(NUMBER_OF_MONTE_CARLO_CYCLES)
+    #step_size = STEP_SIZE #4.0
     D=0.5
+
     pos_old = np.zeros((NUMBER_OF_PARTICLES, DIMENSION), np.double)
     pos_new = np.zeros((NUMBER_OF_PARTICLES, DIMENSION), np.double)
     qf_old = np.zeros((NUMBER_OF_PARTICLES, DIMENSION), np.double)
@@ -73,9 +66,9 @@ def MonteCarlo(Energies, E_L):
 
     seed()
 
-    a = 0.35
-    for ia in range(max_var):
-        a += 0.025
+    a = ALPHA_INIT
+    for ia in range(MAX_VAR):
+        a += ALPHA_STEP
         alpha[ia] = a
         energy = 0
         energy2 = 0
@@ -121,22 +114,34 @@ def MonteCarlo(Energies, E_L):
         energy /= n_MCC
         energy2 /= n_MCC
         variance = energy2 - energy**2
-        error = np.sqrt(abs(variance)/n_MCC)
+        error = np.sqrt(abs(variance)/NUMBER_OF_MONTE_CARLO_CYCLES)
         Energies[ia] = energy
         Variances[ia] = variance
-        accept_rate+=teller/(n_MCC*NUMBER_OF_PARTICLES)
-    return Energies, alpha, accept_rate/max_var
+        accept_rate+=teller/(NUMBER_OF_MONTE_CARLO_CYCLES*NUMBER_OF_PARTICLES)
+    return Energies, alpha, Variances, accept_rate/MAX_VAR
 
 
 
-NUMBER_OF_PARTICLES = 3
-DIMENSION = 1
-max_var = 10
-alpha = np.zeros(max_var)
-Energies_a = np.zeros(max_var)
-Energies_n = np.zeros(max_var)
-Variances = np.zeros(max_var)
+# simulation parameters
+NUMBER_OF_PARTICLES = 10
+DIMENSION = 3
+MAX_VAR = 10
+NUMBER_OF_MONTE_CARLO_CYCLES = 1e3
+ALPHA_INIT = 0.35
+ALPHA_STEP = 0.025
+#STEP_SIZE = 1.0
+dt=5e-3 #0.1 #2.6
+#
+file_suff = 'dt5e-3'
 
+alpha = np.zeros(MAX_VAR)
+Energies_a = np.zeros(MAX_VAR)
+Energies_n = np.zeros(MAX_VAR)
+Variances_a = np.zeros(MAX_VAR)
+Variances_n = np.zeros(MAX_VAR)
+
+"""
+#old
 start_time = time.time()
 
 Energies_a, alpha, accept_rate = MonteCarlo(Energies_a, local_energy_analytical)
@@ -144,8 +149,35 @@ print(time.time()-start_time, 's')
 print(accept_rate) #burde være ca 0.5-0.6, økes med mindre steglengde
 Energies_n, alpha, accept_rate = MonteCarlo(Energies_n, local_energy_numerical)
 #print(accept_rate)
+"""
+# calculate numerically
+start_time = time.time()
+Energies_n, alpha, Variances_n, accept_rate_n = MonteCarlo(Energies_n, Variances_n, local_energy_numerical)
+time_n = time.time()-start_time
+time_n_out = time.strftime("%H:%M:%S", time.gmtime(time.time()-start_time))
+print('Numerical:', time_n_out, ', acceptance rate:', accept_rate_n)
+print()
 
 
+# calculate analytically
+start_time = time.time()
+Energies_a, alpha, Variances_a, accept_rate_a = MonteCarlo(Energies_a, Variances_a, local_energy_analytical)
+time_a = time.time()-start_time
+time_a_out = time.strftime("%H:%M:%S", time.gmtime(time.time()-start_time))
+print('Analytical:', time_a_out, ', acceptance rate:', accept_rate_a)
+print()
+
+
+# write to file
+f = open('c-'+str(NUMBER_OF_PARTICLES)+'P-'+str(DIMENSION)+'D_'+file_suff+'.txt', 'w')
+f.write(str(time_a)+'    '+str(time_n)+'\n')
+f.write(str(accept_rate_a)+'    '+str(accept_rate_n)+'\n')
+f.write('alpha      E_a         E_n         v_a         v_n\n')
+for i in range(len(alpha)):
+    f.write(str(alpha[i])+'    '+str(Energies_a[i])+'    '+str(Energies_n[i])+'    '+str(Variances_a[i])+'    '+str(Variances_n[i])+'\n')
+
+
+# plot
 plt.plot(alpha, Energies_a, label='Analytical')
 plt.plot(alpha, Energies_n, label='Numerical')
 plt.legend()
@@ -154,7 +186,8 @@ plt.xlabel(r'$\alpha$')
 plt.ylabel('E')
 plt.show()
 
-plt.plot(alpha, Variances)
+plt.plot(alpha, Variances_a)
+plt.plot(alpha, Variances_n)
 plt.grid(True)
 plt.xlabel(r'$\alpha$')
 plt.ylabel(r'$\sigma$')
