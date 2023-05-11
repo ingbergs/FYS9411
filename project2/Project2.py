@@ -3,6 +3,39 @@ import random
 
 #import necessary modules
 
+def waveFunction(r):
+    #using the wavefunction from P1 for now
+    
+    wF = 1
+    for i in range(len(r)):
+        r2 = 0
+        for j in range(len(r[i])):
+            r2 += r[i,j]**2
+        wF *= np.exp(r2)
+    return(wF)    
+
+def monteCarlo(a,b,w):
+    #using the brute force Monte Carlo without learning parameters for now
+    
+    nMC = 1E4
+    
+    #initialize starting positions
+    oldPos = np.random.normal(loc = 0.0, scale = 1.0, size = (nParticles,nDimensions))
+    
+    random.seed()
+    energ = 0.0
+    deltaE = 0.0
+    
+    oldWF = waveFunction(oldPos)
+    
+    for im in range(nMC):
+        
+    
+    
+    
+    return(0,[0,0,0])
+    
+    
 
 
 
@@ -10,8 +43,9 @@ import random
 #main
 
 #defining system parameters
-nParticles = 1
-nDimensions = 1
+nParticles = 2
+nDimensions = 2
+
 nHidden = 2
 
 #initializing learning parameters
@@ -26,7 +60,7 @@ eList = np.zeros(maxSamples)
 costDerivative = [np.copy(a),np.copy(b),np.copy(w)]
 
 #starting iterations
-for i in range(0,maxSamples):
+for i in range(maxSamples):
     energy, costDerivative = monteCarlo(a,b,w)
     aGrad = costDerivative[0]
     bGrad = costDerivative[1]
