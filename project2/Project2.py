@@ -2,7 +2,7 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 import multiprocessing
-
+import sys
 
 #import necessary modules
 
@@ -94,8 +94,8 @@ def Qfac(r, b,w):
 def monteCarlo(a,b,w):
     #using the brute force Monte Carlo without learning parameters for now
     
-    nMC = int(5E4)
-    step = 0.0001
+    nMC = int(2E4)
+    step = 0.001
     #initialize starting positions
     oldPos = np.random.normal(loc = 0.0, scale = 1.0, size = (nParticles,nDimensions))
     newPos = np.zeros((nParticles, nDimensions), np.double)
@@ -183,7 +183,7 @@ def maining(proc, return_dict):
     a = np.random.normal(loc = 0.0, scale = 1.0, size = (nParticles,nDimensions))
     b = np.random.normal(loc = 0.0, scale = 1.0, size = nHidden)
     w = np.random.normal(loc = 0.0, scale = 1.0, size = (nParticles,nDimensions,nHidden))
-    eta = 0.1
+    eta = float(sys.argv[1])
     energy = 0
     aList = []
     bList = []
@@ -251,9 +251,10 @@ if __name__ == "__main__":
     
     pList = np.linspace(0,maxSamples-1, maxSamples)
     eList = collect(return_dict)
-    print('alpha = ' + str(return_dict[0][1]) + '\n betha = ' + str(return_dict[0][2]) + '\n weight = ' + str(return_dict[0][3]))
-    plt.plot(pList, eList)
-    plt.show()        
+    #print('Energy = ' + str(eList[-1]) + '\nalpha = ' + str(return_dict[0][1]) + '\nbetha = ' + str(return_dict[0][2]) + '\nweight = ' + str(return_dict[0][3]))
+    print('Energy = ' + str(eList[-1]) + ' with eta = ' + str(sys.argv[1]))
+    #plt.plot(pList, eList)
+    #plt.show()        
 """
 
 fig = plt.figure()
