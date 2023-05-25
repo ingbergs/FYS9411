@@ -21,7 +21,7 @@ legend = []
 for i in range(ix):
     Energy = E[(i*ix):(i+1)*ix]
     legend.append(str(eta[i*ix-1]))
-    plt.hist(Energy, bins = 100)
+    plt.hist(Energy, bins = 10)
    
     
     

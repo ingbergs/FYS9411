@@ -71,14 +71,20 @@ def DerivativeWFansatz(r,a,b,w):
             
     return  WfDer
 
-def qForce(alpha, betha, r):
+def QuantumForce(r,a,b,w):
     
-    qF = np.zeros((len(r),len(r[0])), np.double)
-    for i in range(len(r)):
-        for j in range(len(r[i])    ):
-        
-            qF[i,j] = r[i,j]*alpha
-    return(-2*qF)
+    qforce = np.zeros((nParticles,nDimensions), np.double)
+    sum1 = np.zeros((nParticles,nDimensions), np.double)
+    
+    Q = Qfac(r,b,w)
+    
+    for ih in range(nHidden):
+        sum1 += w[:,:,ih]/(1+np.exp(-Q[ih]))
+    
+    qforce = 2*(-(r-a) + sum1)
+    
+    return qforce
+
 
 def Qfac(r, b,w):
     Q = np.zeros((nHidden), np.double)
@@ -94,12 +100,19 @@ def Qfac(r, b,w):
 def monteCarlo(a,b,w):
     #using the brute force Monte Carlo without learning parameters for now
     
-    nMC = int(2E4)
-    step = 0.001
+    nMC = int(1E3)
+    step = 0.01
+    D = 0.5
+    TimeStep = 4
+    
     #initialize starting positions
     oldPos = np.random.normal(loc = 0.0, scale = 1.0, size = (nParticles,nDimensions))
     newPos = np.zeros((nParticles, nDimensions), np.double)
     wfOld = waveFunction(oldPos, a, b, w)
+    
+    # Quantum force
+    QuantumForceOld = np.zeros((nParticles,nDimensions), np.double)
+    QuantumForceNew = np.zeros((nParticles,nDimensions), np.double)
     
     
     random.seed()
@@ -112,11 +125,12 @@ def monteCarlo(a,b,w):
     EnergyDer = [np.copy(a),np.copy(b),np.copy(w)]
     DeltaPsi = [np.copy(a),np.copy(b),np.copy(w)]
     DerivativePsiE = [np.copy(a),np.copy(b),np.copy(w)]
+    
     for i in range(3): EnergyDer[i].fill(0.0)
     for i in range(3): DeltaPsi[i].fill(0.0)
     for i in range(3): DerivativePsiE[i].fill(0.0)
 
-    oldWF = waveFunction(oldPos, a, b, w)
+    
     
     for im in range(nMC):
         for ix in range(nParticles):
@@ -124,11 +138,27 @@ def monteCarlo(a,b,w):
                 newPos[ix,jx] = oldPos[ix,jx] + step*(random.random()-0.5)
             
             wfNew = waveFunction(newPos, a, b, w)
-                 
-            probability = wfNew**2/wfOld**2
+            QuantumForceNew = QuantumForce(newPos,a,b,w)
+            if(importance):
+                
+                QuantumForceOld = QuantumForce(oldPos,a,b,w)
+                GreensFunction = 0.0
+                for j in range(nDimensions):
+                    GreensFunction += 0.5*(QuantumForceOld[ix,jx]+QuantumForceNew[ix,jx])*\
+                                      (D*TimeStep*0.5*(QuantumForceOld[ix,jx]-QuantumForceNew[ix,jx])-\
+                                      newPos[ix,jx]+oldPos[ix,jx])
+      
+                GreensFunction = np.exp(GreensFunction)
+                probability = GreensFunction*wfNew**2/wfOld**2
+                
+            else:
+                probability = wfNew**2/wfOld**2
+                #print('som for')
             
-            if(random.random() > probability):
-                oldPos = newPos.copy()
+            if(random.random() < probability):
+                for j in range(nDimensions):
+                    oldPos[ix,j] = newPos[ix,j]
+                    QuantumForceOld[ix, j] = QuantumForceNew[ix,j]
                 wfOld = wfNew.copy()
         DeltaE = localEnergy(oldPos,a,b,w)
         DerPsi = DerivativeWFansatz(oldPos,a,b,w)
@@ -169,12 +199,14 @@ nDimensions = 1
 
 nHidden = 2
 
-maxSamples = 20
+maxSamples = 50
 
 #change to match amount of logical processors available 
 nProcessors = 6
 
+importance = True
 interaction = False
+
 #paralellization
 
 def maining(proc, return_dict):
@@ -254,7 +286,9 @@ if __name__ == "__main__":
     #print('Energy = ' + str(eList[-1]) + '\nalpha = ' + str(return_dict[0][1]) + '\nbetha = ' + str(return_dict[0][2]) + '\nweight = ' + str(return_dict[0][3]))
     print('Energy = ' + str(eList[-1]) + ' with eta = ' + str(sys.argv[1]))
     #plt.plot(pList, eList)
-    #plt.show()        
+    #plt.show()
+    f = open('Elist_eta(' + str(sys.argv[1]) + ')_importance.txt', 'a')
+    f.write(str(eList[-1]) + '\n')
 """
 
 fig = plt.figure()
