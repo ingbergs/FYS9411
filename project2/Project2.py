@@ -100,10 +100,10 @@ def Qfac(r, b,w):
 def monteCarlo(a,b,w):
     #using the brute force Monte Carlo without learning parameters for now
     
-    nMC = int(1E3)
+    nMC = int(5E3)
     step = 0.01
     D = 0.5
-    TimeStep = 4
+    TimeStep = 0.1
     
     #initialize starting positions
     oldPos = np.random.normal(loc = 0.0, scale = 1.0, size = (nParticles,nDimensions))
@@ -202,9 +202,9 @@ nHidden = 2
 maxSamples = 50
 
 #change to match amount of logical processors available 
-nProcessors = 6
+nProcessors = 1
 
-importance = True
+importance = False
 interaction = False
 
 #paralellization
@@ -233,28 +233,34 @@ def maining(proc, return_dict):
         aGrad = costDerivative[0]
         bGrad = costDerivative[1]
         wGrad = costDerivative[2]
-    
+       
         a -= eta*aGrad
         b -= eta*bGrad
         w -= eta*wGrad
         
         
-        
+        #aList.append(a[-1])
+        #bList.append(b)
+        #wList.append(w)
         eList[i] = energy
         
    
 
         
         #print(eList, costDerivative)
-    aList.append(costDerivative[0])
-    bList.append(costDerivative[1])
-    wList.append(costDerivative[2])
+    #aList.append(costDerivative[0])
+    #bList.append(costDerivative[1])
+    #wList.append(costDerivative[2])
+    
     returnList = [eList, aList, bList, wList]    
     return_dict[proc] = returnList
     
 def collect(energyList):
     energy = []
-    a = []
+    
+    #a = np.zeros((len(energyList[0][1]),len(energyList[0][1][0])),np.double)
+    
+    
     #collecting energies
     for i in range(len(energyList[0][0])):
         E = 0
@@ -262,6 +268,17 @@ def collect(energyList):
             E += energyList[j][0][i]
         E  /= len(energyList)
         energy.append(E)
+    #for i in range(len(energyList[0][1])):
+    """
+    for ia in range(len(energyList)):
+        for ja in range(len(a)):
+            
+            for ka in range(len(a[ja])):
+                
+                a[ja,ka] += energyList[ia][1][ja][ka]
+                
+    a /= len(energyList) 
+    """
     return(energy)
     
 if __name__ == "__main__":
@@ -281,14 +298,20 @@ if __name__ == "__main__":
     
     
     
-    pList = np.linspace(0,maxSamples-1, maxSamples)
+    pList = np.linspace(0,maxSamples, maxSamples+1)
     eList = collect(return_dict)
     #print('Energy = ' + str(eList[-1]) + '\nalpha = ' + str(return_dict[0][1]) + '\nbetha = ' + str(return_dict[0][2]) + '\nweight = ' + str(return_dict[0][3]))
     print('Energy = ' + str(eList[-1]) + ' with eta = ' + str(sys.argv[1]))
-    #plt.plot(pList, eList)
-    #plt.show()
-    f = open('Elist_eta(' + str(sys.argv[1]) + ')_importance.txt', 'a')
+    f = open('Elist_eta(' + str(sys.argv[1]) + ')_brute.txt', 'a')
     f.write(str(eList[-1]) + '\n')
+"""
+    for i in range(len(aList)):
+        #print(aList)    
+        for j in range(len(aList[i])):
+            plt.plot(pList[i],aList[i][j],'x', color= 'blue')
+    plt.show()
+"""
+    
 """
 
 fig = plt.figure()
