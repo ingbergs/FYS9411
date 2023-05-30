@@ -100,8 +100,8 @@ def Qfac(r, b,w):
 def monteCarlo(a,b,w):
     #using the brute force Monte Carlo without learning parameters for now
     
-    nMC = int(5E3)
-    step = 0.01
+    nMC = int(2E3   )
+    step = 0.1
     D = 0.5
     TimeStep = 0.1
     
@@ -194,15 +194,15 @@ def monteCarlo(a,b,w):
 #main
 
 #defining system parameters
-nParticles = 1
-nDimensions = 1
+nParticles = 2
+nDimensions = 2
 
 nHidden = 2
 
 maxSamples = 50
 
 #change to match amount of logical processors available 
-nProcessors = 1
+nProcessors = 6
 
 importance = False
 interaction = False
