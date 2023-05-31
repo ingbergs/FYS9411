@@ -100,10 +100,10 @@ def Qfac(r, b,w):
 def monteCarlo(a,b,w):
     #using the brute force Monte Carlo without learning parameters for now
     
-    nMC = int(2E3   )
+    nMC = int(2E2)
     step = 0.1
     D = 0.5
-    TimeStep = 0.1
+    TimeStep = float(sys.argv[2])
     
     #initialize starting positions
     oldPos = np.random.normal(loc = 0.0, scale = 1.0, size = (nParticles,nDimensions))
@@ -135,7 +135,10 @@ def monteCarlo(a,b,w):
     for im in range(nMC):
         for ix in range(nParticles):
             for jx in range(nDimensions):
-                newPos[ix,jx] = oldPos[ix,jx] + step*(random.random()-0.5)
+                    if(importance):
+                        newPos[ix,jx] = oldPos[ix,jx]+random.normalvariate(0.0,1.0)*np.sqrt(TimeStep)+QuantumForceOld[ix,jx]*TimeStep*D
+                    else:
+                        newPos[ix,jx] = oldPos[ix,jx] + step*(random.random()-0.5)
             
             wfNew = waveFunction(newPos, a, b, w)
             QuantumForceNew = QuantumForce(newPos,a,b,w)
@@ -194,12 +197,12 @@ def monteCarlo(a,b,w):
 #main
 
 #defining system parameters
-nParticles = 2
-nDimensions = 2
+nParticles = 1
+nDimensions = 1
 
 nHidden = 2
 
-maxSamples = 50
+maxSamples = 30
 
 #change to match amount of logical processors available 
 nProcessors = 6
@@ -208,7 +211,7 @@ importance = False
 interaction = False
 
 #paralellization
-
+gamma = 1E-5
 def maining(proc, return_dict):
     #initializing learning parameters
     
@@ -222,6 +225,7 @@ def maining(proc, return_dict):
     wList = []
     eList = np.zeros(maxSamples)
     
+    costDerivative = np.empty((3,),dtype=object)
     costDerivative = [np.copy(a),np.copy(b),np.copy(w)]
     
     #starting iterations
@@ -237,12 +241,13 @@ def maining(proc, return_dict):
         a -= eta*aGrad
         b -= eta*bGrad
         w -= eta*wGrad
+        eList[i] = energy
         
         
         #aList.append(a[-1])
         #bList.append(b)
         #wList.append(w)
-        eList[i] = energy
+        
         
    
 
@@ -301,9 +306,9 @@ if __name__ == "__main__":
     pList = np.linspace(0,maxSamples, maxSamples+1)
     eList = collect(return_dict)
     #print('Energy = ' + str(eList[-1]) + '\nalpha = ' + str(return_dict[0][1]) + '\nbetha = ' + str(return_dict[0][2]) + '\nweight = ' + str(return_dict[0][3]))
-    print('Energy = ' + str(eList[-1]) + ' with eta = ' + str(sys.argv[1]))
-    f = open('Elist_eta(' + str(sys.argv[1]) + ')_brute.txt', 'a')
-    f.write(str(eList[-1]) + '\n')
+    print('Energy = ' + str(eList[-1]) + ' with eta = ' + str(sys.argv[1]) + ' and TS = ' + str(sys.argv[2]))
+    f = open('ETAandTSfor1P1D_Brute.txt', 'a')
+    f.write(str(eList[-1]) + ' ' + str(sys.argv[1]) + '\n')
 """
     for i in range(len(aList)):
         #print(aList)    

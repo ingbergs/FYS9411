@@ -6,7 +6,7 @@ import os, sys
 
 n= 4096*2*2*2*2*2*2*2*2
 eta = 0.5/n
-fileName = 'Elist_eta(' + str(eta) + ')_brute.txt'
+fileName = 'Elist_eta(0.01)_TS(0.001)_importance.txt'
 os.system('cmd /c "python CleanerOfNan.py" ' +str(fileName))
 
 
