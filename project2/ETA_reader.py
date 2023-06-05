@@ -6,49 +6,52 @@ E = []
 
 ix = 0
 ixB = False
+
+totEtaList = []
+totEList = []
+eList = []
 etaList = []
 
 
-
-with open('ETAandTSfor1P1D_Brute.txt') as f:
+with open('ETAandTSfor1P1D_Brute_copy.txt') as f:
     for readline in f:
         line = readline.split('\n')
         
         line = line[0].split(' ')
+        if(line[0] == 'Energies' and len(eList) > 0):
+            totEtaList.append(etaList[-1])
+            totEList.append(eList[-1])
+            etaList = []
+            eList = []
+            
         
-        
-        
-        if(line[0] != 'nan' and abs(float(line[0])) <= 1 and float(line[0]) > 0):
-            E.append(float(line[0]))
-            eta.append(float(line[1]))
-                
-        if(float(line[1]) not in etaList):
-            etaList.append(float(line[1]))
+        if(line[0] != 'Energies'):
+            eList.append(line[0])
+            etaList.append(line[-1])
         
 
-        
-        if(len(eta)> 1 and eta[-1] != eta[-2] and ixB == False):
-            ixB = True
-            
-        if(ixB == False):
-            ix += 1
-            
 
 eList = []
-meanList = []
-etaList2 = []
-for i in range(1,len(E)):
-    if(eta[i] != eta[i-1]):
-        etaList2.append(eta[i-1])
-        eList.append(np.mean(meanList))
-        meanList = []
-      
-    meanList.append(E[i])
+etaList = [] 
+c = 1     
+print(totEtaList[-1])
+E = 0
+for i in range(c, len(totEtaList)):
+    E += float(totEList[i])
+    
+    if(totEtaList[i] != totEtaList[i-1]):
+        eList.append(E/(float(i-c)))
+        etaList.append(totEtaList[i-1])
+        E = 0
+        c = i
+
+    
        
-print(eList)
-print(etaList2)    
+for i in range(len(eList)):
+    print(eList[i], etaList[i])
+    
         
-plt.plot(etaList2,eList)
+plt.plot(etaList,eList, 'x')
 plt.show()
     
     
